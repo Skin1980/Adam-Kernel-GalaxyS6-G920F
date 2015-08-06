@@ -54,6 +54,13 @@ config BCM4358
 	  This module adds support for wireless adapters based on
 	  Broadcom 4358 chipset.
 
+config BCM4358_A3
+	tristate "Broadcom 4358 wireless cards support"
+	depends on BROADCOM_WIFI
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4358 chipset.
+
 config BCM43241
 	tristate "Broadcom 43241 wireless cards support"
 	depends on BROADCOM_WIFI
@@ -108,6 +115,13 @@ config WLAIBSS
 	default y
 	---help---
 	  This is a configuration for Oxygen Network.
+
+config WL_NAN
+	bool "NAN Feature"
+	depends on (BCM4354 || BCM4358)
+	default n
+	---help---
+	  This is a configuration for NAN Feature.
 
 config BCMDHD_PCIE
 	bool "Enable PCIe I/F Support"

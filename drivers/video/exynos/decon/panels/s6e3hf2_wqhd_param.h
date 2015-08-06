@@ -198,16 +198,11 @@ static const unsigned char SEQ_PENTILE_SETTING[] = {
 };
 
 static const unsigned char SEQ_POC_SETTING1[] = {
-	0xC3,
-	0xC0, 0x00, 0x33
-};
-
-static const unsigned char SEQ_POC_SETTING2[] = {
 	0xB0,
 	0x20
 };
 
-static const unsigned char SEQ_POC_SETTING3[] = {
+static const unsigned char SEQ_POC_SETTING2[] = {
 	0xFE,
 	0x04
 };
@@ -391,5 +386,17 @@ static const unsigned char SEQ_GLOBAL_PARAM_21[] = {
 	0x15
 };
 #endif
+
+
+enum {
+	HBM_INTER_OFF = 0,
+	HBM_COLORBLIND_ON,
+	HBM_GALLERY_ON,
+};
+
+// 384 ~ 550
+static const char HBM_INTER_22TH_OFFSET[] = {
+	0x02, 0x04, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+};
 
 #endif /* __S6E3HF2_PARAM_H__ */
