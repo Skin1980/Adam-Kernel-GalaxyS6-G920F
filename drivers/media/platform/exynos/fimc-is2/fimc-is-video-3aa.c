@@ -517,14 +517,29 @@ static int fimc_is_3aa_video_s_ctrl(struct file *file, void *priv,
 				fimc_is_itf_set_fwboot(device, COLD_BOOT);
 				break;
 			case IS_WARM_BOOT:
-				/* change value to X when TWIZ & back | frist time back camera */
-				if(!device->interface->first_launch) {
-					fimc_is_itf_set_fwboot(device, FIRST_LAUNCHING);
-					device->interface->first_launch = true;
-				} else {
-					fimc_is_itf_set_fwboot(device, WARM_BOOT);
+#ifdef CONFIG_USE_VENDER_FEATURE
+				if (device->interface->need_cold_reset) {
+					minfo("[3AA:V] FW cold boot mode for reset\n", vctx);
+					fimc_is_itf_set_fwboot(device, COLD_BOOT);
+					device->interface->first_launch = false;
+				} else
+#endif
+				{
+					/* change value to X when TWIZ & back | frist time back camera */
+					if(!device->interface->first_launch) {
+						fimc_is_itf_set_fwboot(device, FIRST_LAUNCHING);
+						device->interface->first_launch = true;
+					} else {
+						fimc_is_itf_set_fwboot(device, WARM_BOOT);
+					}
 				}
 				break;
+#ifdef CONFIG_USE_VENDER_FEATURE
+			case IS_COLD_RESET:
+				device->interface->need_cold_reset = true;
+				minfo("[3AA:V] need cold reset!!!\n", vctx);
+				break;
+#endif
 			default:
 				err("unsupported ioctl(0x%X)", ctrl->id);
 				ret = -EINVAL;

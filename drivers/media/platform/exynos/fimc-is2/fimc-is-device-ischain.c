@@ -2429,6 +2429,11 @@ int fimc_is_ischain_power(struct fimc_is_device_ischain *device, int on)
 			goto p_err;
 		}
 
+#ifdef CONFIG_USE_VENDER_FEATURE
+		if (device->interface->need_cold_reset)
+			device->interface->need_cold_reset = false;
+#endif
+
 		set_bit(FIMC_IS_ISCHAIN_POWER_ON, &device->state);
 	} else {
 #ifdef FW_SUSPEND_RESUME
@@ -3614,7 +3619,7 @@ static int fimc_is_ischain_init_wrap(struct fimc_is_device_ischain *device,
 
 		ret = fimc_is_ischain_init(device, module_id);
 		if (ret) {
-			merr("fimc_is_chain_close is fail(%d)", device, ret);
+			merr("fimc_is_ischain_init is fail(%d)", device, ret);
 			goto p_err;
 		}
 

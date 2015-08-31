@@ -2372,7 +2372,7 @@ static struct samsung_gate exynos7420_gate_clks[] __initdata = {
 	GATE(hsi2c6, "pclk_hsi2c6", "usermux_aclk_peric1_66", \
 			EXYNOS7420_ENABLE_PCLK_PERIC1, 6, 0, NULL),
 	GATE(hsi2c7, "pclk_hsi2c7", "usermux_aclk_peric1_66", \
-			EXYNOS7420_ENABLE_PCLK_PERIC1, 7, 0, NULL),
+			EXYNOS7420_ENABLE_PCLK_PERIC1, 7, 0, "pclk-hsi2c7"),
 	GATE(hsi2c8, "pclk_hsi2c8", "usermux_aclk_peric1_66", \
 			EXYNOS7420_ENABLE_PCLK_PERIC1, 8, 0, NULL),
 	GATE(pclk_spi0, "pclk_spi0", "usermux_aclk_peric1_66", \

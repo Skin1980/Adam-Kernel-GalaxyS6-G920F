@@ -1122,10 +1122,18 @@ static struct ipa_sensor_conf ipa_sensor_conf = {
 static int exynos_pm_notifier(struct notifier_block *notifier,
 		unsigned long pm_event, void *v)
 {
+	int i;
+	struct exynos_tmu_data *data;
+	data = platform_get_drvdata(exynos_tmu_pdev);
+
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		mutex_lock(&tmudata->lock);
 		is_suspending = true;
+
+		for (i = 0; i < EXYNOS_TMU_COUNT; i++)
+			cal_tmu_interrupt(data->cal_data, i, false);
+
 		exynos_tmu_call_notifier(TMU_COLD, 0);
 		exynos_gpu_call_notifier(TMU_COLD);
 		mutex_unlock(&tmudata->lock);
@@ -1133,6 +1141,9 @@ static int exynos_pm_notifier(struct notifier_block *notifier,
 	case PM_POST_SUSPEND:
 		mutex_lock(&tmudata->lock);
 		is_suspending = false;
+
+		for (i = 0; i < EXYNOS_TMU_COUNT; i++)
+			cal_tmu_interrupt(data->cal_data, i, true);
 		mutex_unlock(&tmudata->lock);
 		break;
 	}

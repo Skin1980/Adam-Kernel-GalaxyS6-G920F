@@ -82,7 +82,9 @@
 /* Post Processing Configruation */
 /* #define ENABLE_DRC */
 /* #define ENABLE_DIS */
+#if defined(CONFIG_CAMERA_NOBLE) || defined(CONFIG_CAMERA_ZENLTE) || defined(CONFIG_CAMERA_VLTE)
 #define ENABLE_DNR
+#endif
 #define ENABLE_VRA
 
 #else

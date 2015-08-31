@@ -531,10 +531,12 @@ static int encrypt_scatterlist(struct ecryptfs_crypt_stat *crypt_stat,
 	BUG_ON(!crypt_stat || !crypt_stat->tfm
 	       || !(crypt_stat->flags & ECRYPTFS_STRUCT_INITIALIZED));
 	if (unlikely(ecryptfs_verbosity > 0)) {
+#ifndef CONFIG_SDP
 		ecryptfs_printk(KERN_DEBUG, "Key size [%zd]; key:\n",
 				crypt_stat->key_size);
 		ecryptfs_dump_hex(crypt_stat->key,
 				  crypt_stat->key_size);
+#endif
 	}
 
 	init_completion(&ecr.completion);
@@ -1387,7 +1389,7 @@ static void ecryptfs_set_default_crypt_stat_vals(
 	crypt_stat->file_version = ECRYPTFS_FILE_VERSION;
 	crypt_stat->mount_crypt_stat = mount_crypt_stat;
 #ifdef CONFIG_SDP
-	crypt_stat->userid = mount_crypt_stat->userid;
+	crypt_stat->engine_id = -1;
 #endif
 }
 
@@ -1484,7 +1486,8 @@ static struct ecryptfs_flag_map_elem ecryptfs_flag_map[] = {
 #ifdef CONFIG_SDP
 	{0x00000008, ECRYPTFS_ENCRYPT_FILENAMES},
 	{0x00100000, ECRYPTFS_DEK_SDP_ENABLED},
-	{0x00200000, ECRYPTFS_DEK_IS_SENSITIVE},
+    {0x00200000, ECRYPTFS_DEK_IS_SENSITIVE},
+    {0x00400000, ECRYPTFS_DEK_MULTI_ENGINE},
 #else
 	{0x00000008, ECRYPTFS_ENCRYPT_FILENAMES}
 #endif
@@ -2143,7 +2146,7 @@ int ecryptfs_read_metadata(struct dentry *ecryptfs_dentry)
 	if (crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) {
 		ecryptfs_printk(KERN_INFO, "dek_file_type is sensitive, enc type=%d\n",
 				crypt_stat->sdp_dek.type);
-		if (ecryptfs_is_persona_locked(crypt_stat->userid)) {
+		if (ecryptfs_is_persona_locked(crypt_stat->engine_id)) {
 			ecryptfs_printk(KERN_INFO, "persona is locked, rc=%d\n", rc);
 		} else {
 			ecryptfs_printk(KERN_INFO, "persona is unlocked, rc=%d\n", rc);

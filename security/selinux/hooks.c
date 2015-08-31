@@ -220,7 +220,16 @@ static inline u32 task_sid(const struct task_struct *task)
 	u32 sid;
 
 	rcu_read_lock();
+#ifdef CONFIG_RKP_KDP
+	if(rkp_cred_enable) {
+		while((u64)(__task_cred(task)->security) == (u64)0x07);
+		sid = cred_sid(__task_cred(task));
+	}
+	else
+		sid = cred_sid(__task_cred(task));
+#else
 	sid = cred_sid(__task_cred(task));
+#endif
 	rcu_read_unlock();
 	return sid;
 }
@@ -5226,6 +5235,7 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
 				  "SELinux:  unrecognized netlink message"
 				  " type=%hu for sclass=%hu\n",
 				  nlh->nlmsg_type, sksec->sclass);
+
 			if (!selinux_enforcing || security_get_allow_unknown())
 				err = 0;
 		}
@@ -6662,6 +6672,7 @@ static __init int selinux_init(void)
 
 	if (register_security(&selinux_ops))
 		panic("SELinux: Unable to register with kernel.\n");
+
 	if (selinux_enforcing)
 		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
 	else
@@ -6738,6 +6749,7 @@ static struct nf_hook_ops selinux_ipv6_ops[] = {
 static int __init selinux_nf_ip_init(void)
 {
 	int err = 0;
+
 	if (!selinux_enabled)
 		goto out;
 

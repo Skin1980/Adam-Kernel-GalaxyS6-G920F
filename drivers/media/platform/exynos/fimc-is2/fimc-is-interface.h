@@ -195,6 +195,10 @@ struct fimc_is_interface {
 	struct camera2_uctl		isp_peri_ctl;
 	/* check firsttime */
 	bool				first_launch;
+#ifdef CONFIG_USE_VENDER_FEATURE
+	/* FW cold boot  next time */
+	bool				need_cold_reset;
+#endif
 	ulong				itf_kvaddr;
 	void				*core;
 };

@@ -134,6 +134,7 @@ struct vfsspi_device_data {
 	size_t stream_buffer_size;
 	unsigned int drdy_pin;
 	unsigned int sleep_pin;
+	struct task_struct *t;
 	int user_pid;
 	int signal_id;
 	unsigned int current_spi_speed;
@@ -192,33 +193,19 @@ extern void fingerprint_unregister(struct device *dev,
 
 static int vfsspi_send_drdy_signal(struct vfsspi_device_data *vfsspi_device)
 {
-	struct task_struct *t;
 	int ret = 0;
 
 	pr_debug("%s\n", __func__);
 
-	if (vfsspi_device->user_pid != 0) {
-		rcu_read_lock();
-		/* find the task_struct associated with userpid */
-		pr_debug("%s Searching task with PID=%08x\n",
-			__func__, vfsspi_device->user_pid);
-		t = pid_task(find_pid_ns(vfsspi_device->user_pid, &init_pid_ns),
-			     PIDTYPE_PID);
-		if (t == NULL) {
-			pr_debug("%s No such pid\n", __func__);
-			rcu_read_unlock();
-			return -ENODEV;
-		}
-		rcu_read_unlock();
+	if (vfsspi_device->t) {
 		/* notify DRDY signal to user process */
 		ret = send_sig_info(vfsspi_device->signal_id,
-				    (struct siginfo *)1, t);
+				    (struct siginfo *)1, vfsspi_device->t);
 		if (ret < 0)
 			pr_err("%s Error sending signal\n", __func__);
 
-	} else {
-		pr_err("%s pid not received yet\n", __func__);
-	}
+	} else
+		pr_err("%s task_struct is not received yet\n", __func__);
 
 	return ret;
 }
@@ -633,6 +620,18 @@ static int vfsspi_register_drdy_signal(struct vfsspi_device_data *vfsspi_device,
 	} else {
 		vfsspi_device->user_pid = usr_signal.user_pid;
 		vfsspi_device->signal_id = usr_signal.signal_id;
+		rcu_read_lock();
+		/* find the task_struct associated with userpid */
+		vfsspi_device->t = pid_task(find_pid_ns(vfsspi_device->user_pid, &init_pid_ns),
+			     PIDTYPE_PID);
+		if (vfsspi_device->t == NULL) {
+			pr_debug("%s No such pid\n", __func__);
+			rcu_read_unlock();
+			return -ENODEV;
+		}
+		rcu_read_unlock();
+		pr_info("%s Searching task with PID=%08x, t = %p\n",
+			__func__, vfsspi_device->user_pid, vfsspi_device->t);
 	}
 	return 0;
 }
@@ -682,18 +681,26 @@ static irqreturn_t vfsspi_irq(int irq, void *context)
 	Therefore, we are checking DRDY GPIO pin state to make sure
 	if the interrupt handler has been called actually by DRDY
 	interrupt and it's not a previous interrupt re-play */
-	if ((gpio_get_value(vfsspi_device->drdy_pin) == DRDY_ACTIVE_STATUS)
-#ifdef ENABLE_SENSORS_FPRINT_SECURE
-		 && (atomic_read(&vfsspi_device->irq_enabled)
-		== DRDY_IRQ_ENABLE)) {
-#else
-	) {
-#endif
+	if (gpio_get_value(vfsspi_device->drdy_pin) != DRDY_ACTIVE_STATUS) {
+		pr_err("%s, DRDY is Low.\n", __func__);
+		return IRQ_HANDLED;
+	}
 
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	if ((atomic_read(&vfsspi_device->irq_enabled)
+		== DRDY_IRQ_ENABLE)) {
 		vfsspi_disableIrq(vfsspi_device);
 		vfsspi_send_drdy_signal(vfsspi_device);
-		pr_info("%s\n", __func__);
+	} else {
+		pr_err("%s, irq is not enabled\n", __func__);
+		return IRQ_HANDLED;
 	}
+#else
+	vfsspi_disableIrq(vfsspi_device);
+	vfsspi_send_drdy_signal(vfsspi_device);
+#endif
+	pr_info("%s\n", __func__);
+
 	return IRQ_HANDLED;
 }
 

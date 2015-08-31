@@ -1106,6 +1106,17 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 	int i;
 	struct decon_psr_info psr;
 
+	mutex_lock(&decon->output_lock);
+	if (decon->state == DECON_STATE_OFF) {
+		decon_warn("%s: decon is already disabled(tui=%d)\n", __func__, tui_en);
+		decon->out_type = DECON_OUT_DSI;
+		/* UnBlocking LPD */
+		decon_lpd_unblock(decon);
+		mutex_unlock(&decon->output_lock);
+		return -EBUSY;
+		}
+	mutex_unlock(&decon->output_lock);
+
 	if (tui_en) {
 		/* Blocking LPD */
 		decon_lpd_block_exit(decon);
@@ -1128,7 +1139,6 @@ int decon_tui_protection(struct decon_device *decon, bool tui_en)
 		}
 #endif
 		decon_to_psr_info(decon, &psr);
-		decon_reg_start(decon->id, decon->pdata->dsi_mode, &psr);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		if (!decon->id && decon->pdata->trig_mode == DECON_HW_TRIG)
 			decon_reg_set_trigger(decon->id, decon->pdata->dsi_mode,
@@ -1409,6 +1419,9 @@ int decon_disable(struct decon_device *decon)
 			flush_workqueue(esd->esd_wq);
 		}
 	}
+
+	if (decon->out_type == DECON_OUT_TUI)
+			decon_tui_protection(decon, false);
 
 	if (decon->state != DECON_STATE_LPD_ENT_REQ)
 		mutex_lock(&decon->output_lock);

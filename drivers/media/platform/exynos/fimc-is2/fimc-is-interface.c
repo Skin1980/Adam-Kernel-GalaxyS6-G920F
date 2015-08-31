@@ -977,8 +977,8 @@ static void wq_func_general(struct work_struct *data)
 				ISDRV_VERSION, msg->param1,
 				get_drv_clock_gate() |
 				get_drv_dvfs());
-			set_bit(IS_IF_STATE_START, &itf->state);
 			itf->pdown_ready = IS_IF_POWER_DOWN_NREADY;
+			set_bit(IS_IF_STATE_START, &itf->state);
 			wake_up(&itf->init_wait_queue);
 			break;
 		case ISR_DONE:
@@ -2728,6 +2728,9 @@ int fimc_is_interface_probe(struct fimc_is_interface *this,
 
 	this->itf_kvaddr = minfo->kvaddr;
 	this->first_launch = false;
+#ifdef CONFIG_USE_VENDER_FEATURE
+	this->need_cold_reset = false;
+#endif
 	ret = request_irq(irq, interface_isr, 0, "mcuctl", this);
 	if (ret)
 		probe_err("request_irq failed\n");

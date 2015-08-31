@@ -1198,7 +1198,8 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				iod->name);
 			iod->msd->is_crash_by_ril = true;
 
-			return mc->ops.modem_force_crash_exit(mc);
+			modemctl_notify_event(MDM_EVENT_CP_FORCE_CRASH);
+			return 0;
 		}
 		mif_err("%s: !mc->ops.modem_force_crash_exit\n", iod->name);
 		return -EINVAL;
@@ -1248,22 +1249,35 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case IOCTL_MODEM_CP_UPLOAD:
 	{
-		char *buff = iod->msd->cp_crash_info+
-			     strlen(CP_CRASH_TAG)+
-			     (iod->msd->is_crash_by_ril ?
-				strlen(CP_CRASH_BY_RIL) : 0);
+		char *buff;
+		unsigned int log_len = 0;
 		void __user *user_buff = (void __user *)arg;
 
 		mif_err("%s: ERR! IOCTL_MODEM_CP_UPLOAD\n", iod->name);
-		strcpy(iod->msd->cp_crash_info, CP_CRASH_TAG);
 
-		if (iod->msd->is_crash_by_ril)
-			strcat(iod->msd->cp_crash_info, CP_CRASH_BY_RIL);
+		strcpy(iod->msd->cp_crash_info, CP_CRASH_TAG);
+		log_len = strlen(CP_CRASH_TAG);
+
+		if (iod->msd->is_crash_by_ril) {
+			strncat(iod->msd->cp_crash_info,
+				CP_CRASH_BY_RIL,
+				strlen(CP_CRASH_BY_RIL));
+				log_len += strlen(CP_CRASH_BY_RIL);
+		}
+
+		if (mc->ops.modem_cp_upload) {
+			log_len += mc->ops.modem_cp_upload(mc,
+						iod->msd->cp_crash_info +
+							  log_len);
+		}
+
+		buff = iod->msd->cp_crash_info + log_len;
 
 		if (arg) {
 			if (copy_from_user(buff, user_buff, CP_CRASH_INFO_SIZE))
 				return -EFAULT;
 		}
+
 		panic(iod->msd->cp_crash_info);
 		return 0;
 	}
@@ -1599,7 +1613,7 @@ static int vnet_xmit(struct sk_buff *skb, struct net_device *ndev)
 		skb_new = skb_copy_expand(skb, headroom, tailroom, GFP_ATOMIC);
 		if (!skb_new) {
 			mif_info("%s: ERR! skb_copy_expand fail\n", iod->name);
-			goto retry;
+			return NETDEV_TX_BUSY;
 		}
 	}
 
@@ -1657,16 +1671,6 @@ static int vnet_xmit(struct sk_buff *skb, struct net_device *ndev)
 		dev_kfree_skb_any(skb);
 
 	return NETDEV_TX_OK;
-
-retry:
-	/*
-	If @skb has been expanded to $skb_new, only $skb_new must be freed here
-	because @skb will be reused by NET_TX.
-	*/
-	if (skb_new)
-		dev_kfree_skb_any(skb_new);
-
-	return NETDEV_TX_BUSY;
 
 drop:
 	ndev->stats.tx_dropped++;

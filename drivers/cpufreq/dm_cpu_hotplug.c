@@ -25,6 +25,7 @@
 
 #include <mach/cpufreq.h>
 #include <linux/suspend.h>
+#include <linux/exynos-ss.h>
 
 #if defined(CONFIG_SOC_EXYNOS5430)
 #define NORMALMIN_FREQ	1000000
@@ -1104,6 +1105,7 @@ sleep:
 	return 0;
 
 failed_out:
+	exynos_ss_set_hardlockup(1);
 	panic("%s: failed dynamic hotplug (exe_cmd %d)\n", __func__, exe_cmd);
 
 	return ret;
