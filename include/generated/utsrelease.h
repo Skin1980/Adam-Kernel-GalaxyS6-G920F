@@ -1,1 +1,1 @@
-#define UTS_RELEASE "3.10.61-Adam-2.6"
+#define UTS_RELEASE "3.10.61-Skin1980-1.0"
